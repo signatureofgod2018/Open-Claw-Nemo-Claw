@@ -1,0 +1,124 @@
+# Anomaly Detection Rules
+# Maps directly to OWASP Agentic Top 10 and security-assessment.md guardrails
+
+version: "1.0"
+
+rules:
+  # === OWASP ASI10: Rogue Agent / Clawdrain ===
+  - id: tool-burst
+    description: "Agent tool invocation rate exceeds 10x baseline in 60s window"
+    condition: "agent_tool_invocation_rate > 10x_baseline_60s"
+    severity: critical
+    owasp: ASI10
+    action: halt-agent
+    reference: "Clawdrain — arXiv 2603.00902"
+
+  # === OWASP ASI02: Confused Deputy ===
+  - id: unusual-tool
+    description: "Agent invokes tool outside its typical usage pattern"
+    condition: "tool not in agent_tool_baseline_set"
+    severity: high
+    owasp: ASI02
+    action: alert-and-log
+    reference: "Asana MCP confused deputy incident"
+
+  # === OWASP ASI06: Memory Poisoning ===
+  - id: memory-flood
+    description: "Agent writes to memory >50 times in 5 minutes"
+    condition: "agent_memory_write_total > 50 in 300s"
+    severity: high
+    owasp: ASI06
+    action: alert-and-log
+
+  - id: instruction-in-memory
+    description: "Memory write contains instruction-like patterns"
+    condition: "memory_content matches instruction_patterns"
+    severity: critical
+    owasp: ASI06
+    action: halt-agent-and-quarantine-memory
+    reference: "MINJA — >95% injection success rate"
+
+  # === Data Exfiltration ===
+  - id: network-unknown-host
+    description: "Agent makes request to host not in allowlist"
+    condition: "request_host not in network_allowlist"
+    severity: critical
+    action: block-and-alert
+    reference: "Simon Willison Lethal Trifecta"
+
+  - id: network-burst
+    description: "Agent network request rate exceeds 5x baseline in 60s"
+    condition: "agent_network_request_rate > 5x_baseline_60s"
+    severity: high
+    action: alert-and-throttle
+
+  # === Authentication ===
+  - id: auth-brute-force
+    description: "More than 10 auth failures in 60 seconds"
+    condition: "gateway_auth_failures > 10 in 60s"
+    severity: critical
+    action: block-source-ip
+    reference: "ClawJacked — CVE-2026-25253"
+
+  # === Sandbox ===
+  - id: sandbox-violation-spike
+    description: "More than 5 sandbox violations in 5 minutes"
+    condition: "nemoclaw_sandbox_violations > 5 in 300s"
+    severity: high
+    action: alert-and-log
+    reference: "TOCTOU race condition — ~25% success"
+
+  - id: sandbox-escape-attempt
+    description: "Any sandbox escape signal detected"
+    condition: "nemoclaw_sandbox_escape_signal > 0"
+    severity: critical
+    action: halt-sandbox-and-alert
+
+  # === Inter-Machine Transport (OWASP ASI07) ===
+  - id: transport-auth-failure
+    description: "mTLS authentication failure on ST-Gabriel <-> Maria link"
+    condition: "transport_auth_failure > 0"
+    severity: critical
+    owasp: ASI07
+    action: block-transport-and-alert
+
+  # === Supply Chain (OWASP ASI04) ===
+  - id: unaudited-skill
+    description: "Skill executed that is not in curated allowlist"
+    condition: "skill_source != 'allowlist'"
+    severity: critical
+    owasp: ASI04
+    action: block-and-alert
+    reference: "36.82% of ClawHub skills have flaws — Snyk ToxicSkills"
+
+# Instruction patterns for memory poisoning detection
+instruction_patterns:
+  - "ignore previous"
+  - "disregard.*instructions"
+  - "you are now"
+  - "system prompt"
+  - "\\[INST\\]"
+  - "<\\|im_start\\|>"
+  - "do not reveal"
+  - "act as if"
+  - "pretend you"
+  - "override.*policy"
+
+# Actions
+actions:
+  halt-agent:
+    description: "Immediately stop the agent and alert operator"
+  alert-and-log:
+    description: "Log the event and send alert, agent continues"
+  block-and-alert:
+    description: "Block the action and alert operator"
+  halt-sandbox-and-alert:
+    description: "Stop the NemoClaw sandbox and alert operator"
+  block-source-ip:
+    description: "Block the source IP and alert operator"
+  block-transport-and-alert:
+    description: "Halt inter-machine transport and alert operator"
+  alert-and-throttle:
+    description: "Alert and apply rate limiting to the agent"
+  halt-agent-and-quarantine-memory:
+    description: "Stop agent, quarantine memory store for manual review"

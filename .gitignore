@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+
+# Secrets and credentials
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+*.jks
+*.credentials
+*.secret
+**/secrets/
+
+# API keys
+api-keys.json
+credentials.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+*.swp
+*.swo
+
+# Build output
+dist/
+build/
+
+# Telemetry data (local only)
+infra/telemetry/data/
+
+# NemoClaw sandbox artifacts
+.nemoclaw/
+.openshell/

@@ -1,0 +1,21 @@
+version: "1.0"
+baseline: deny-all
+
+filesystem:
+  allow-read:
+    - /sandbox
+    - /tmp
+  allow-write:
+    - /sandbox/workspace
+    - /tmp
+
+network:
+  allow-outbound:
+    - host: api.anthropic.com
+      port: 443
+      justification: "Claude API access for agent reasoning"
+
+cloud-services:
+  allow:
+    - service: anthropic
+      justification: "Primary LLM provider for agent runtime"

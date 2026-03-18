@@ -1,0 +1,32 @@
+repos:
+  - repo: local
+    hooks:
+      - id: security-check
+        name: Security Sentinel Pre-Commit
+        entry: bash .claude/hooks/security-check.sh
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: no-sensitive-files
+        name: Block sensitive files
+        entry: bash -c 'git diff --cached --name-only --diff-filter=A | grep -iE "\.(env|pem|key|p12|pfx|keystore|credentials|secret)$" && echo "BLOCKED: Sensitive files staged" && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks

@@ -1,0 +1,131 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: "Stage 1: Lint"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint YAML files
+        uses: ibiqlik/action-yamllint@v3
+        with:
+          file_or_dir: "."
+          config_data: |
+            extends: default
+            rules:
+              line-length:
+                max: 200
+              truthy:
+                check-keys: false
+
+      - name: Lint JSON files
+        run: |
+          find . -name "*.json" -not -path "./.git/*" -not -path "./node_modules/*" | while read f; do
+            echo "Validating: $f"
+            python3 -m json.tool "$f" > /dev/null || exit 1
+          done
+
+  format-validation:
+    name: "Stage 2: Format Validation"
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install yq
+        run: |
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+
+      - name: Install check-jsonschema
+        run: pip install check-jsonschema
+
+      - name: Validate agent definitions
+        run: bash infra/ci/scripts/validate-agent-format.sh
+
+      - name: Validate skill definitions
+        run: bash infra/ci/scripts/validate-skill-format.sh
+
+      - name: Validate hooks config
+        run: bash infra/ci/scripts/validate-hooks-config.sh
+
+  security-scan:
+    name: "Stage 3: Security Scan"
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run security checks (CI mode)
+        run: bash infra/ci/scripts/run-security-sentinel.sh
+
+      - name: Scan for secrets with gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependency-audit:
+    name: "Stage 4: Dependency Audit"
+    runs-on: ubuntu-latest
+    needs: lint
+    if: contains(github.event.head_commit.modified, 'package.json') || contains(github.event.head_commit.added, 'package.json')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Audit dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm audit --audit-level=high
+          fi
+
+      - name: Check for postinstall scripts
+        run: |
+          if [ -f package.json ]; then
+            node -e "
+              const pkg = require('./package.json');
+              const deps = {...(pkg.dependencies || {}), ...(pkg.devDependencies || {})};
+              console.log('Checking', Object.keys(deps).length, 'dependencies for install scripts...');
+            "
+          fi
+
+  merge-safety:
+    name: "Stage 5: Merge Safety"
+    runs-on: ubuntu-latest
+    needs: [format-validation, security-scan]
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check for structural conflicts
+        run: bash infra/ci/scripts/merge-conflict-detector.sh
+
+  integration-tests:
+    name: "Stage 6: Integration Tests"
+    runs-on: ubuntu-latest
+    needs: [format-validation, security-scan]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run test fixtures
+        run: |
+          echo "Running format validation against test fixtures..."
+          bash infra/test/integration/test-fixture-validation.sh

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SKILL.md YAML Frontmatter",
+  "description": "Validates SKILL.md YAML frontmatter for OpenClaw-compatible skills",
+  "type": "object",
+  "required": ["name", "description", "version"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Skill identifier (lowercase, hyphens allowed)"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "What the skill does"
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "description": "Semantic version"
+    },
+    "user-invocable": {
+      "type": "boolean",
+      "description": "Whether this skill can be invoked as a slash command"
+    },
+    "disable-model-invocation": {
+      "type": "boolean",
+      "description": "Whether to exclude from model prompt"
+    }
+  },
+  "additionalProperties": true
+}

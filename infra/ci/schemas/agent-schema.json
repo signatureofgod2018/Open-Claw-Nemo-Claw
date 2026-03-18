@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent Definition YAML Frontmatter",
+  "description": "Validates agent .md YAML frontmatter",
+  "type": "object",
+  "required": ["name", "description"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Agent identifier (lowercase, hyphens allowed)"
+    },
+    "description": {
+      "type": "string",
+      "minLength": 10,
+      "description": "When and how to use this agent"
+    },
+    "model": {
+      "type": "string",
+      "enum": ["sonnet", "opus", "haiku", "inherit"],
+      "description": "LLM model to use"
+    },
+    "color": {
+      "type": "string",
+      "enum": ["blue", "cyan", "green", "yellow", "red", "magenta"],
+      "description": "Display color"
+    },
+    "tools": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tools available to this agent"
+    }
+  },
+  "additionalProperties": true
+}

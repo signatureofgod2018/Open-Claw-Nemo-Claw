@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Telemetry Event",
+  "description": "Structured telemetry event for OpenClaw + NemoClaw monitoring",
+  "type": "object",
+  "required": ["timestamp", "machine", "event_type"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "machine": {
+      "type": "string",
+      "enum": ["st-gabriel", "maria"],
+      "description": "Source machine"
+    },
+    "agent_id": {
+      "type": "string",
+      "description": "Agent that generated the event"
+    },
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "tool_invocation",
+        "memory_write",
+        "memory_read",
+        "network_request",
+        "policy_violation",
+        "auth_event",
+        "transport_message",
+        "skill_invocation",
+        "sandbox_event",
+        "gateway_health"
+      ]
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Traces a chain of agent actions across machines"
+    },
+    "details": {
+      "type": "object",
+      "description": "Event-specific payload"
+    },
+    "owasp_asi": {
+      "type": "string",
+      "pattern": "^ASI\\d{2}$",
+      "description": "Relevant OWASP Agentic Security Issue (ASI01-ASI10)"
+    }
+  }
+}

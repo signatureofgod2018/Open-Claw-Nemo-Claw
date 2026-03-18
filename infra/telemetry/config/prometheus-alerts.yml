@@ -1,0 +1,158 @@
+# Prometheus Alerting Rules — maps to OWASP Agentic Top 10 gaps
+# See ai-workspace/security-assessment.md for full gap analysis
+
+groups:
+  - name: gateway_health
+    interval: 30s
+    rules:
+      - alert: GatewayDown
+        expr: up{job="openclaw-gateway"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenClaw Gateway is down on {{ $labels.machine }}"
+
+      - alert: HighErrorRate
+        expr: rate(openclaw_gateway_error_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: high
+        annotations:
+          summary: "High error rate on {{ $labels.machine }} Gateway"
+
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(openclaw_gateway_latency_seconds_bucket[5m])) > 5
+        for: 5m
+        labels:
+          severity: medium
+        annotations:
+          summary: "P95 latency > 5s on {{ $labels.machine }}"
+
+  - name: security_brute_force
+    interval: 15s
+    rules:
+      # ClawJacked attack detection — CVE-2026-25253
+      - alert: AuthBruteForce
+        expr: rate(openclaw_gateway_auth_failures_total[1m]) > 10
+        for: 30s
+        labels:
+          severity: critical
+          owasp: ASI03
+        annotations:
+          summary: "Possible brute force attack on {{ $labels.machine }} (>10 auth failures/min)"
+          reference: "ClawJacked — oasis.security/blog/openclaw-vulnerability"
+
+  - name: security_rogue_agent
+    interval: 15s
+    rules:
+      # Clawdrain / Rogue agent detection — OWASP ASI10
+      - alert: ToolInvocationBurst
+        expr: rate(openclaw_agent_tool_invocation_total[1m]) > 10 * avg_over_time(openclaw_agent_tool_invocation_total[1h])
+        for: 1m
+        labels:
+          severity: critical
+          owasp: ASI10
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} tool invocation rate 10x above baseline"
+          reference: "Clawdrain — arXiv 2603.00902"
+
+      - alert: UnusualToolUsage
+        expr: openclaw_agent_tool_invocation_total{tool!~"read|grep|glob"} unless openclaw_agent_tool_baseline
+        for: 0s
+        labels:
+          severity: high
+          owasp: ASI02
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} invoked unusual tool: {{ $labels.tool }}"
+
+  - name: security_memory_poisoning
+    interval: 15s
+    rules:
+      # Memory poisoning detection — OWASP ASI06
+      - alert: MemoryWriteFlood
+        expr: rate(openclaw_agent_memory_write_total[5m]) > 10
+        for: 1m
+        labels:
+          severity: high
+          owasp: ASI06
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} writing to memory at unusual rate"
+          reference: "MINJA — >95% injection success rate"
+
+      - alert: InstructionInMemory
+        expr: openclaw_agent_memory_write_content_flags_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          owasp: ASI06
+        annotations:
+          summary: "Instruction-like content detected in agent {{ $labels.agent_id }} memory write"
+
+  - name: security_exfiltration
+    interval: 15s
+    rules:
+      # Data exfiltration detection
+      - alert: NetworkRequestToUnknownHost
+        expr: openclaw_agent_network_request_total{host!~"api.anthropic.com|api.openai.com|localhost"} > 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} made request to unlisted host: {{ $labels.host }}"
+
+      - alert: NetworkBurst
+        expr: rate(openclaw_agent_network_request_total[1m]) > 5 * avg_over_time(openclaw_agent_network_request_total[1h])
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Agent {{ $labels.agent_id }} network request rate 5x above baseline"
+
+  - name: security_sandbox
+    interval: 15s
+    rules:
+      # Sandbox escape detection
+      - alert: SandboxViolationSpike
+        expr: rate(nemoclaw_sandbox_violation_total[5m]) > 1
+        for: 1m
+        labels:
+          severity: high
+        annotations:
+          summary: "Sandbox violations spiking on {{ $labels.machine }}"
+
+      - alert: SandboxEscapeAttempt
+        expr: nemoclaw_sandbox_escape_attempt_total > 0
+        for: 0s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Possible sandbox escape attempt on {{ $labels.machine }}"
+          reference: "TOCTOU race — ~25% success rate"
+
+  - name: security_transport
+    interval: 15s
+    rules:
+      # Inter-machine transport — OWASP ASI07
+      - alert: TransportAuthFailure
+        expr: openclaw_transport_auth_failure_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          owasp: ASI07
+        annotations:
+          summary: "mTLS authentication failure on ST-Gabriel <-> Maria transport"
+
+  - name: security_supply_chain
+    interval: 30s
+    rules:
+      # Supply chain — OWASP ASI04
+      - alert: UnauditedSkillExecution
+        expr: openclaw_skill_invocation_total{source!="allowlist"} > 0
+        for: 0s
+        labels:
+          severity: critical
+          owasp: ASI04
+        annotations:
+          summary: "Unaudited skill '{{ $labels.skill }}' executed on {{ $labels.machine }}"
+          reference: "36.82% of ClawHub skills have flaws — Snyk ToxicSkills"

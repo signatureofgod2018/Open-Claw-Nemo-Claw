@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Audit Log Entry",
+  "description": "Compliance audit trail entry — append-only, integrity-chained",
+  "type": "object",
+  "required": ["timestamp", "machine", "event_type", "sequence_number", "integrity_hash"],
+  "properties": {
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "machine": {
+      "type": "string",
+      "enum": ["st-gabriel", "maria"]
+    },
+    "agent_id": {
+      "type": "string"
+    },
+    "event_type": {
+      "type": "string"
+    },
+    "details": {
+      "type": "object"
+    },
+    "risk_level": {
+      "type": "string",
+      "enum": ["info", "low", "medium", "high", "critical"]
+    },
+    "correlation_id": {
+      "type": "string"
+    },
+    "sequence_number": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Monotonically increasing sequence — gaps indicate tampering"
+    },
+    "integrity_hash": {
+      "type": "string",
+      "pattern": "^sha256:[a-f0-9]{64}$",
+      "description": "SHA-256 hash of (previous_hash + current_entry) — tamper detection"
+    }
+  }
+}

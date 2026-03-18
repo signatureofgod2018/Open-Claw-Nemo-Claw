@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Hooks Configuration",
+  "description": "Validates hooks.json lifecycle hook configuration",
+  "type": "object",
+  "required": ["description", "hooks"],
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "hooks": {
+      "type": "object",
+      "required": ["PreToolUse", "PostToolUse", "Stop", "UserPromptSubmit"],
+      "properties": {
+        "PreToolUse": { "type": "array" },
+        "PostToolUse": { "type": "array" },
+        "Stop": { "type": "array" },
+        "UserPromptSubmit": { "type": "array" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

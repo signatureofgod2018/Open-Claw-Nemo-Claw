@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "NemoClaw Security Policy",
+  "description": "Validates NemoClaw YAML security policies enforce deny-all baseline",
+  "type": "object",
+  "required": ["version", "baseline"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+$"
+    },
+    "baseline": {
+      "type": "string",
+      "enum": ["deny-all"],
+      "description": "Must start with deny-all — no exceptions"
+    },
+    "filesystem": {
+      "type": "object",
+      "properties": {
+        "allow-read": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "allow-write": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "network": {
+      "type": "object",
+      "properties": {
+        "allow-outbound": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["host", "justification"],
+            "properties": {
+              "host": { "type": "string" },
+              "port": { "type": "integer" },
+              "justification": {
+                "type": "string",
+                "minLength": 10,
+                "description": "Why this host needs to be reachable"
+              }
+            }
+          }
+        }
+      }
+    },
+    "cloud-services": {
+      "type": "object",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["service", "justification"],
+            "properties": {
+              "service": { "type": "string" },
+              "justification": { "type": "string", "minLength": 10 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

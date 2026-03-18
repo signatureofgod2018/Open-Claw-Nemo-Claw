@@ -1,0 +1,43 @@
+# Alert Routing Configuration
+# Determines where alerts go based on severity
+
+version: "1.0"
+
+routes:
+  critical:
+    channels:
+      - type: webhook
+        url: "${ALERT_WEBHOOK_URL}"
+        description: "Immediate notification for critical security events"
+      - type: log
+        path: /var/log/openclaw/critical-alerts.log
+    escalation:
+      timeout: 5m
+      action: "halt-all-agents if unacknowledged"
+
+  high:
+    channels:
+      - type: webhook
+        url: "${ALERT_WEBHOOK_URL}"
+      - type: log
+        path: /var/log/openclaw/alerts.log
+    escalation:
+      timeout: 15m
+      action: "re-alert"
+
+  medium:
+    channels:
+      - type: log
+        path: /var/log/openclaw/alerts.log
+
+  low:
+    channels:
+      - type: log
+        path: /var/log/openclaw/alerts.log
+
+# Suppression rules (avoid alert storms)
+suppression:
+  - rule: "same alert + same agent within 5m"
+    action: deduplicate
+  - rule: "more than 10 alerts in 1m"
+    action: "batch into single summary alert"
