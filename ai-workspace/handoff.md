@@ -101,8 +101,21 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
 - OS: Windows 11 Pro + WSL2 Ubuntu 24.04 LTS
 - Docker Desktop installed (WSL2 backend)
 
+### 10. Ubuntu 24.04 LTS on WSL2 — Installed & Hardened
+- **Distro**: Ubuntu 24.04.4 LTS (Noble Numbat) — default WSL2 distro
+- **User**: `agenticos` (uid 1000, sudo, passwordless sudo for setup)
+- **Resources**: 15 GB RAM, 955 GB disk, 16 CPUs, systemd enabled
+- **Hardening applied**:
+  - Root account locked
+  - Home directory 700 (owner only)
+  - SSH hardened config (no root, no password auth, max 3 tries)
+  - Kernel: IP forwarding disabled, ASLR enabled, SYN cookies, no ICMP redirects
+  - Core dumps disabled, umask 027, file descriptor limit 65536
+  - /opt/agenticos/ created with restricted permissions (certs dir 700)
+  - Windows PATH stripped (appendWindowsPath=false)
+  - Login banner: "AgenticOS — ST-GABRIEL — Guarded by St. Michael"
+
 ## Blockers
-- WSL2 Ubuntu 24.04 provisioning (in progress)
 - AMD GPU — no Nemotron local models (NVIDIA only), using Mistral via Ollama instead
 
 ## Key Resources
