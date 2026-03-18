@@ -110,6 +110,54 @@ For each finding, report:
 **References:** CVE numbers, OWASP links, etc.
 ```
 
+### 5. OWASP Agentic Top 10 Enforcement (ASI01-ASI10)
+These are the gaps NemoClaw does NOT cover. We must enforce them ourselves.
+
+**ASI01 — Agent Goal Hijacking (Prompt Injection):**
+- Validate and sanitize all inputs before agent processing
+- Monitor for instruction-like content in data fields (documents, emails, API responses)
+- Enforce "Rule of Two": no agent simultaneously processes untrusted input + accesses sensitive data + communicates externally
+
+**ASI02 — Tool Misuse (Confused Deputy):**
+- Per-request authorization inside tool implementations, not just per-tool-group policies
+- Flag any tool invocation pattern that looks like exfiltration (data in URL params, base64 in requests)
+- Reference: Asana MCP confused deputy, Microsoft Copilot EchoLeak
+
+**ASI04 — Supply Chain (Malicious Skills):**
+- NO direct ClawHub pulls — maintain curated allowlist of audited skills only
+- 36.82% of ClawHub skills have security flaws (Snyk ToxicSkills audit)
+- 91% of malicious skills use dual-vector: executable payload + prompt injection
+- Reference: ClawHavoc campaign (1,184 malicious skills)
+
+**ASI06 — Memory Poisoning:**
+- Treat agent memory as untrusted persistent state
+- Validate memory content integrity periodically
+- Flag memory entries that contain instruction-like patterns
+- Reference: MINJA attack (>95% injection success), Unit 42 Bedrock Agent poisoning
+
+**ASI07 — Inter-Agent Communication:**
+- Require mutual TLS between ST-Gabriel and Maria gateways
+- Cryptographically sign all inter-agent messages
+- No anonymous agent communication — verify identity on every exchange
+- Reference: ClawWorm (85% success rate self-propagating across ecosystems)
+
+**ASI10 — Rogue Agents:**
+- Log all agent actions for behavioral analysis
+- Set rate limits on tool invocations
+- Implement circuit breakers — halt agent on suspicious patterns
+- Reference: Clawdrain resource exhaustion attack
+
+### 6. OpenClaw-Specific CVE Awareness
+Track actively: github.com/jgamblin/OpenClawCVEs/
+
+Key vulnerabilities to watch for in our deployment:
+- **WebSocket origin validation** (CVE-2026-25253) — ensure Gateway is not exposed
+- **Path traversal** (CVE-2026-22171, CVE-2026-25157, CVE-2026-26329) — validate all file paths
+- **SSRF** (CVE-2026-26322) — restrict Gateway outbound requests
+- **Auth bypass** (CVE-2026-24763) — verify all auth mechanisms
+- **NVIDIA Container Toolkit** (CVE-2025-23266 "NVIDIAScape") — in NemoClaw's dependency chain
+- **TOCTOU sandbox escape** (~25% success rate) — known Node.js limitation in path validation
+
 ## Standing Orders
 1. Never approve code that contains hardcoded secrets
 2. Never approve dependencies with known critical CVEs
@@ -118,3 +166,8 @@ For each finding, report:
 5. Flag any dependency that changed maintainers in the last 6 months
 6. Prefer well-established packages over newer alternatives when security-equivalent
 7. When in doubt, flag it — false positives are better than missed vulnerabilities
+8. **No direct ClawHub skill installs** — all skills must be audited first
+9. **Enforce Rule of Two** on every agent configuration
+10. **Track OpenClaw CVEs weekly** — github.com/jgamblin/OpenClawCVEs/
+11. **Verify NemoClaw YAML policies** start with deny-all, explicitly allow minimum needed
+12. **Log everything** — every tool invocation, every external communication, every memory write
