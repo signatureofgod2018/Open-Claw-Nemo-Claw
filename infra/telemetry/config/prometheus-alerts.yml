@@ -156,3 +156,186 @@ groups:
         annotations:
           summary: "Unaudited skill '{{ $labels.skill }}' executed on {{ $labels.machine }}"
           reference: "36.82% of ClawHub skills have flaws — Snyk ToxicSkills"
+
+  # ================================================================
+  # BEHAVIORAL CANARIES
+  # "Hacks reveal themselves in silly things" — performance drift,
+  # package bloat, dormant activations, network latency shifts.
+  # These are not security events. They are the smoke before the fire.
+  # ================================================================
+
+  - name: canary_performance_drift
+    interval: 30s
+    rules:
+      # The XZ Utils signal — latency increase without explanation
+      - alert: GatewayLatencyDrift
+        expr: |
+          (openclaw_gateway_latency_ms - openclaw_gateway_latency_ms_baseline)
+          / openclaw_gateway_latency_ms_stddev > 3
+        for: 5m
+        labels:
+          severity: high
+          canary: performance
+        annotations:
+          summary: "Gateway latency on {{ $labels.machine }} is >3σ above baseline"
+          context: "The XZ Utils backdoor was caught because SSH was 500ms slower. Investigate any unexplained latency increase."
+
+      - alert: ResponseTimeDegradation
+        expr: histogram_quantile(0.99, rate(openclaw_gateway_latency_seconds_bucket[5m])) > 2 * histogram_quantile(0.99, rate(openclaw_gateway_latency_seconds_bucket[1h]))
+        for: 10m
+        labels:
+          severity: medium
+          canary: performance
+        annotations:
+          summary: "P99 response time doubled on {{ $labels.machine }} in the last 10 minutes"
+
+      - alert: CPUAnomalyNoExplanation
+        expr: system_cpu_percent > 80 unless on(machine) (rate(openclaw_agent_tool_invocation_total[5m]) > 1)
+        for: 5m
+        labels:
+          severity: high
+          canary: resource
+        annotations:
+          summary: "High CPU on {{ $labels.machine }} with no corresponding agent activity — unexplained load"
+
+      - alert: MemoryCreep
+        expr: delta(system_memory_used_mb[1h]) > 100 and system_memory_used_mb / system_memory_total_mb > 0.8
+        for: 10m
+        labels:
+          severity: medium
+          canary: resource
+        annotations:
+          summary: "Memory growing steadily on {{ $labels.machine }} — possible leak or hidden process"
+
+      - alert: DiskGrowthAnomaly
+        expr: predict_linear(system_disk_used_mb[6h], 24*3600) > system_disk_total_mb * 0.95
+        for: 30m
+        labels:
+          severity: medium
+          canary: resource
+        annotations:
+          summary: "Disk on {{ $labels.machine }} predicted to hit 95% within 24h at current growth rate"
+
+      - alert: FileDescriptorSurge
+        expr: system_open_file_descriptors > 2 * avg_over_time(system_open_file_descriptors[1d])
+        for: 5m
+        labels:
+          severity: medium
+          canary: resource
+        annotations:
+          summary: "Open file descriptors doubled on {{ $labels.machine }} — investigate"
+
+  - name: canary_network_behavior
+    interval: 30s
+    rules:
+      - alert: NetworkLatencySpike
+        expr: openclaw_network_latency_ms > 2 * openclaw_network_latency_baseline_ms
+        for: 5m
+        labels:
+          severity: medium
+          canary: network
+        annotations:
+          summary: "Network latency to {{ $labels.target_host }} doubled on {{ $labels.machine }}"
+
+      - alert: NewDNSResolution
+        expr: openclaw_dns_first_seen_total > 0
+        for: 0s
+        labels:
+          severity: medium
+          canary: network
+        annotations:
+          summary: "New DNS resolution observed on {{ $labels.machine }}: {{ $labels.query_name }} → {{ $labels.resolved_ip }}"
+
+      - alert: DNSResolutionChanged
+        expr: openclaw_dns_ip_changed_total > 0
+        for: 0s
+        labels:
+          severity: high
+          canary: network
+        annotations:
+          summary: "DNS resolution changed for {{ $labels.query_name }} on {{ $labels.machine }} — possible DNS hijack"
+
+      - alert: NewOutboundConnection
+        expr: increase(system_network_connections_established[5m]) > 3 * avg_over_time(system_network_connections_established[1d])
+        for: 5m
+        labels:
+          severity: medium
+          canary: network
+        annotations:
+          summary: "Outbound connections tripled on {{ $labels.machine }}"
+
+      - alert: PacketLossIncrease
+        expr: openclaw_network_packet_loss_pct > 5
+        for: 5m
+        labels:
+          severity: medium
+          canary: network
+        annotations:
+          summary: "Packet loss >5% to {{ $labels.target_host }} — network degradation"
+
+  - name: canary_package_supply_chain
+    interval: 60s
+    rules:
+      # The dormant package problem — installed but never used... until it is
+      - alert: DormantPackageActivated
+        expr: openclaw_package_first_activation_total > 0
+        for: 0s
+        labels:
+          severity: high
+          canary: supply_chain
+        annotations:
+          summary: "Previously dormant package '{{ $labels.package_name }}' just activated on {{ $labels.machine }}"
+          context: "Packages installed but never used are a sleeper attack vector. Investigate why it activated now."
+
+      - alert: PackageSizeIncrease
+        expr: openclaw_package_size_delta_bytes > 100000
+        for: 0s
+        labels:
+          severity: medium
+          canary: supply_chain
+        annotations:
+          summary: "Package '{{ $labels.package_name }}' grew by {{ $value }} bytes on {{ $labels.machine }}"
+          context: "Unexpected size increases can indicate injected payloads."
+
+      - alert: PackageMaintainerChange
+        expr: openclaw_package_maintainer_change_total > 0
+        for: 0s
+        labels:
+          severity: high
+          canary: supply_chain
+        annotations:
+          summary: "Maintainer changed for package '{{ $labels.package_name }}'"
+          context: "Maintainer takeover is the XZ Utils attack vector. Investigate immediately."
+
+      - alert: NewInstallScriptDetected
+        expr: openclaw_package_install_script_added_total > 0
+        for: 0s
+        labels:
+          severity: critical
+          canary: supply_chain
+        annotations:
+          summary: "Install script added to package '{{ $labels.package_name }}' on {{ $labels.machine }}"
+          context: "postinstall scripts are the primary npm supply chain attack vector."
+
+  - name: canary_process_anomaly
+    interval: 30s
+    rules:
+      - alert: NewProcessDetected
+        expr: openclaw_process_first_seen_total > 0
+        for: 0s
+        labels:
+          severity: medium
+          canary: process
+        annotations:
+          summary: "New process '{{ $labels.process_name }}' detected on {{ $labels.machine }}"
+          context: "Unexpected processes may indicate compromise. Verify this is expected."
+
+      - alert: UnexpectedListeningPort
+        expr: delta(system_network_connections_listening[5m]) > 0
+        for: 1m
+        labels:
+          severity: high
+          canary: process
+        annotations:
+          summary: "New listening port opened on {{ $labels.machine }}"
+          context: "Backdoors often open new listening ports. Investigate immediately."

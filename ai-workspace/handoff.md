@@ -39,12 +39,19 @@ OpenClaw + NemoClaw documented. Full security gap analysis (512 CVEs, 9 NemoClaw
 
 ### 6. PostgreSQL Telemetry Persistence
 - **Database**: `openclaw_telemetry`, schema: `telemetry`
-- **Tables**: security_events (partitioned monthly), audit_log (integrity-chained), agent_baselines, skill_allowlist, alert_history, network_requests (partitioned monthly)
-- **Views**: 7 pre-built Grafana views — critical events 24h, event summary, OWASP trends, agent risk scores, open alerts, top hosts, hourly event rate
-- **Roles**: telemetry_writer (INSERT only), telemetry_reader (SELECT only), telemetry_admin (maintenance)
-- **Integrity**: SHA-256 hash chain on audit_log via trigger (tamper detection)
-- **Retention**: 12-month default, automated partition drop
-- **Scripts**: `setup-postgres.sh`, `run-migrations.sh`
+- **Core tables**: security_events, audit_log (SHA-256 chain), agent_baselines, skill_allowlist, alert_history, network_requests
+- **Canary tables**: performance_snapshots, performance_baselines, package_inventory, package_changes, package_activation, network_latency, dns_observations, resource_utilization, process_inventory
+- **Views**: 14 pre-built Grafana views — critical events, OWASP trends, risk scores, performance anomalies, dormant package activations, network latency drift, DNS changes, resource spikes, new processes
+- **Roles**: telemetry_writer (INSERT), telemetry_reader (SELECT), telemetry_admin (ALL)
+- **Integrity**: SHA-256 hash chain on audit_log via trigger
+- **Retention**: 12-month, automated partition drop
+- 3 migrations, setup + migration runner scripts
+
+### 7. Behavioral Canaries ("Hacks reveal themselves in silly things")
+- **Philosophy**: Every system metric is a potential security signal. Breaches show up as performance drift, package bloat, dormant activations, latency shifts — not just security alerts.
+- **17 new anomaly detection rules** covering: latency drift, unexplained CPU, memory creep, disk prediction, file descriptor surges, DNS changes, dormant package activation, package size increases, maintainer changes, install script additions, new processes, listening ports
+- **17 new Prometheus alerts** in canary groups: performance drift, network behavior, package supply chain, process anomaly
+- Reference: XZ Utils caught by 500ms SSH latency — not a security scan
 
 ## Architecture Summary
 ```

@@ -91,6 +91,119 @@ rules:
     action: block-and-alert
     reference: "36.82% of ClawHub skills have flaws — Snyk ToxicSkills"
 
+  # =============================================================
+  # BEHAVIORAL CANARIES
+  # "Hacks reveal themselves in silly things"
+  # These are NOT security events — they are the smoke before fire
+  # =============================================================
+
+  # === Performance Drift (the XZ Utils signal) ===
+  - id: latency-drift
+    description: "Gateway or network latency >3σ above baseline for 5+ minutes"
+    condition: "metric_value > baseline_mean + 3 * baseline_stddev for 300s"
+    severity: high
+    action: alert-and-investigate
+    reference: "XZ Utils (CVE-2024-3094) — caught because SSH was 500ms slower"
+
+  - id: cpu-no-explanation
+    description: "CPU >80% with no corresponding agent activity"
+    condition: "cpu_percent > 80 AND agent_tool_invocation_rate < 1"
+    severity: high
+    action: alert-and-investigate
+
+  - id: memory-creep
+    description: "Memory growing >100MB/hour while above 80% utilization"
+    condition: "memory_delta_1h > 100MB AND memory_percent > 80"
+    severity: medium
+    action: alert-and-log
+
+  - id: disk-prediction
+    description: "Disk predicted to hit 95% within 24 hours"
+    condition: "predict_linear(disk_used, 24h) > disk_total * 0.95"
+    severity: medium
+    action: alert-and-log
+
+  - id: file-descriptor-surge
+    description: "Open file descriptors doubled vs. daily average"
+    condition: "open_fds > 2 * avg_fds_24h"
+    severity: medium
+    action: alert-and-investigate
+
+  # === Network Behavioral Canaries ===
+  - id: new-dns-resolution
+    description: "DNS resolution for a domain never seen before"
+    condition: "dns_query_first_seen = true"
+    severity: medium
+    action: alert-and-log
+
+  - id: dns-ip-changed
+    description: "DNS resolution for known domain returned different IP"
+    condition: "dns_ip_changed = true"
+    severity: high
+    action: alert-and-investigate
+    reference: "DNS hijacking is a common pivot technique"
+
+  - id: network-latency-spike
+    description: "Network latency to known host doubled"
+    condition: "latency_ms > 2 * baseline_latency_ms for 300s"
+    severity: medium
+    action: alert-and-log
+
+  - id: packet-loss
+    description: "Packet loss >5% sustained"
+    condition: "packet_loss_pct > 5 for 300s"
+    severity: medium
+    action: alert-and-log
+
+  - id: new-listening-port
+    description: "New listening port opened on machine"
+    condition: "delta(listening_connections, 5m) > 0"
+    severity: high
+    action: alert-and-investigate
+    reference: "Backdoors often open new listening ports"
+
+  # === Package Supply Chain Canaries ===
+  - id: dormant-package-activated
+    description: "Package that was never used just got activated for the first time"
+    condition: "package_first_activation = true"
+    severity: high
+    action: alert-and-investigate
+    reference: "Sleeper packages activate on trigger — investigate timing and invoker"
+
+  - id: package-size-increase
+    description: "Package size increased by >100KB between versions"
+    condition: "package_size_delta > 100000"
+    severity: medium
+    action: alert-and-log
+    reference: "Size inflation can indicate injected payloads"
+
+  - id: package-maintainer-change
+    description: "Package maintainer changed"
+    condition: "package_maintainer_changed = true"
+    severity: high
+    action: alert-and-investigate
+    reference: "XZ Utils — maintainer takeover was the attack vector"
+
+  - id: install-script-added
+    description: "postinstall or preinstall script added to a package"
+    condition: "package_install_script_added = true"
+    severity: critical
+    action: block-and-alert
+    reference: "Install scripts are the #1 npm supply chain attack vector"
+
+  # === Process Canaries ===
+  - id: new-process
+    description: "New process appeared that was never seen before on this machine"
+    condition: "process_first_seen = true"
+    severity: medium
+    action: alert-and-log
+
+  - id: outbound-connection-surge
+    description: "Outbound connections tripled vs. daily average"
+    condition: "established_connections > 3 * avg_connections_24h"
+    severity: medium
+    action: alert-and-investigate
+
 # Instruction patterns for memory poisoning detection
 instruction_patterns:
   - "ignore previous"
@@ -122,3 +235,5 @@ actions:
     description: "Alert and apply rate limiting to the agent"
   halt-agent-and-quarantine-memory:
     description: "Stop agent, quarantine memory store for manual review"
+  alert-and-investigate:
+    description: "Alert operator, flag for manual investigation, continue operation"
