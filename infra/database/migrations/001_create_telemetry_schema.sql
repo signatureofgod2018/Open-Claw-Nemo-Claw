@@ -1,5 +1,5 @@
 -- Migration 001: Create telemetry schema and core tables
--- Open-Claw-Nemo-Claw Critical Telemetry Persistence Layer
+-- AgenticOS Critical Telemetry Persistence Layer
 --
 -- Purpose: Persist critical security telemetry for long-term trend analysis,
 -- compliance auditing, and anomaly detection. Grafana + Prometheus connect

@@ -1,4 +1,4 @@
-# Open-Claw-Nemo-Claw
+# AgenticOS
 
 ## Project Structure
 

@@ -4,7 +4,7 @@
 2026-03-18
 
 ## Current State
-- Repository: https://github.com/signatureofgod2018/Open-Claw-Nemo-Claw
+- Repository: https://github.com/signatureofgod2018/AgenticOS
 - Branch: master
 - Phase 0 — Foundation: **complete**
 

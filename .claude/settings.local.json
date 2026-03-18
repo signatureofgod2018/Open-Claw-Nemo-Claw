@@ -2,7 +2,29 @@
   "permissions": {
     "allow": [
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:genai.owasp.org)",
+      "WebFetch(domain:blog.quarkslab.com)",
+      "WebFetch(domain:news.ycombinator.com)",
+      "WebFetch(domain:labs.snyk.io)",
+      "WebFetch(domain:techcrunch.com)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:unit42.paloaltonetworks.com)",
+      "WebFetch(domain:www.trendmicro.com)",
+      "WebFetch(domain:www.practical-devsecops.com)",
+      "WebFetch(domain:snyk.io)",
+      "WebFetch(domain:forums.developer.nvidia.com)",
+      "WebFetch(domain:blogs.cisco.com)",
+      "WebFetch(domain:www.oasis.security)",
+      "WebFetch(domain:christian-schneider.net)",
+      "WebFetch(domain:www.aigl.blog)",
+      "WebFetch(domain:simonwillison.net)",
+      "WebFetch(domain:www.gstory.ai)",
+      "WebFetch(domain:www.sdxcentral.com)",
+      "WebFetch(domain:www.startupdefense.io)"
     ]
   }
 }

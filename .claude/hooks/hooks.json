@@ -1,5 +1,5 @@
 {
-  "description": "Open-Claw-Nemo-Claw lifecycle hooks",
+  "description": "AgenticOS lifecycle hooks",
   "hooks": {
     "PreToolUse": [
       {

@@ -7,7 +7,7 @@ DB_NAME="${1:-openclaw_telemetry}"
 DB_PORT="${2:-5432}"
 MIGRATIONS_DIR="infra/database/migrations"
 
-echo "=== PostgreSQL Setup for Open-Claw-Nemo-Claw ==="
+echo "=== PostgreSQL Setup for AgenticOS ==="
 
 # 1. Install PostgreSQL
 echo "[1/5] Installing PostgreSQL..."

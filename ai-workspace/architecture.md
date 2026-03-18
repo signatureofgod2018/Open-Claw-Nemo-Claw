@@ -1,4 +1,4 @@
-# Architecture — Open-Claw-Nemo-Claw
+# Architecture — AgenticOS
 
 ## High-Level Overview
 

@@ -28,7 +28,7 @@ processors:
   resource:
     attributes:
       - key: deployment.environment
-        value: "open-claw-nemo-claw"
+        value: "agenticos"
         action: upsert
 
   # Filter sensitive data before export

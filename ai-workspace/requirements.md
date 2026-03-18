@@ -1,4 +1,4 @@
-# Requirements — Open-Claw-Nemo-Claw
+# Requirements — AgenticOS
 
 ## Functional Requirements
 

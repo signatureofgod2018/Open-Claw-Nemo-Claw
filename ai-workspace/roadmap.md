@@ -1,4 +1,4 @@
-# Roadmap — Open-Claw-Nemo-Claw
+# Roadmap — AgenticOS
 
 ## Phase 0 — Foundation (current)
 - [x] Project repo and workspace created

@@ -1,4 +1,4 @@
-# Vision — Open-Claw-Nemo-Claw
+# Vision — AgenticOS
 
 ## Purpose
 A workspace for deploying and integrating **OpenClaw** (open-source AI agent framework) with **NVIDIA NemoClaw** (enterprise security layer) to orchestrate secure AI agent activities between ST-Gabriel and Maria (ARK).
