@@ -1,0 +1,108 @@
+# Prometheus Alerting Rules — Ollama Local Inference Monitoring
+# Feeds into the same Grafana + PostgreSQL pipeline as all other telemetry
+
+groups:
+  - name: ollama_inference_health
+    interval: 15s
+    rules:
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ollama inference server is down on {{ $labels.machine }}"
+
+      - alert: InferenceLatencyDrift
+        expr: |
+          (ollama_time_per_token_seconds - ollama_time_per_token_baseline)
+          / ollama_time_per_token_stddev > 3
+        for: 5m
+        labels:
+          severity: high
+          canary: inference
+        annotations:
+          summary: "Inference latency on {{ $labels.machine }} is >3σ above baseline"
+          context: "Model inference slowing down without load change = investigate. Same signal class as XZ Utils."
+
+      - alert: InferenceP99Spike
+        expr: histogram_quantile(0.99, rate(ollama_request_duration_seconds_bucket[5m])) > 2 * histogram_quantile(0.99, rate(ollama_request_duration_seconds_bucket[1h]))
+        for: 5m
+        labels:
+          severity: medium
+          canary: inference
+        annotations:
+          summary: "Inference P99 latency doubled on {{ $labels.machine }}"
+
+      - alert: TokenThroughputDrop
+        expr: rate(ollama_generated_tokens_total[5m]) < 0.5 * rate(ollama_generated_tokens_total[1h])
+        for: 5m
+        labels:
+          severity: medium
+          canary: inference
+        annotations:
+          summary: "Token generation throughput dropped >50% on {{ $labels.machine }}"
+          context: "Resource contention — another process may be using GPU/CPU"
+
+  - name: ollama_resource_canaries
+    interval: 30s
+    rules:
+      - alert: ModelMemoryGrowth
+        expr: delta(ollama_model_ram_mb[1h]) > 500
+        for: 10m
+        labels:
+          severity: medium
+          canary: inference
+        annotations:
+          summary: "Model RAM usage growing on {{ $labels.machine }} — +{{ $value }}MB in last hour"
+
+      - alert: UnexpectedModelLoad
+        expr: ollama_loaded_models > 1
+        for: 1m
+        labels:
+          severity: medium
+          canary: inference
+        annotations:
+          summary: "Multiple models loaded on {{ $labels.machine }} — expected 1, found {{ $value }}"
+          context: "With 16GB VRAM, only one model should be loaded. Multiple loads = memory pressure or unauthorized model."
+
+      - alert: FrequentModelReloads
+        expr: increase(ollama_model_load_total[1h]) > 10
+        for: 0s
+        labels:
+          severity: medium
+          canary: inference
+        annotations:
+          summary: "Frequent model reloads on {{ $labels.machine }} — {{ $value }} loads in last hour"
+          context: "Frequent reloads indicate memory pressure, model swapping, or OOM kills."
+
+  - name: ollama_security
+    interval: 15s
+    rules:
+      - alert: InferenceFromUnknownAgent
+        expr: ollama_request_duration_seconds_count{agent!~"security-sentinel|openclaw-gateway|.*known-agent.*"} > 0
+        for: 0s
+        labels:
+          severity: high
+        annotations:
+          summary: "Inference request from unknown agent '{{ $labels.agent }}' on {{ $labels.machine }}"
+          context: "Only authorized agents should access the local model. Unknown callers = investigate."
+
+      - alert: InferenceRateBurst
+        expr: rate(ollama_request_duration_seconds_count[1m]) > 5 * avg_over_time(ollama_request_duration_seconds_count[1d])
+        for: 2m
+        labels:
+          severity: high
+          canary: inference
+        annotations:
+          summary: "Inference request rate 5x above daily baseline on {{ $labels.machine }}"
+          context: "Could indicate agent hijack, Clawdrain-style token exhaustion, or unauthorized usage."
+
+      - alert: LargePromptAnomaly
+        expr: ollama_prompt_tokens_total / ollama_request_duration_seconds_count > 10000
+        for: 0s
+        labels:
+          severity: medium
+        annotations:
+          summary: "Unusually large average prompt size on {{ $labels.machine }}"
+          context: "Large prompts could indicate prompt injection payloads or data exfiltration attempts via the model."

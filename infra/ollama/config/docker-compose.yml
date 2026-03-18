@@ -1,0 +1,27 @@
+# Ollama Monitoring Stack
+# Runs ollama-metrics proxy alongside Prometheus scraping
+#
+# The metrics proxy sits between clients and Ollama:
+#   Client → ollama-metrics (:8080) → Ollama (:11434)
+#                ↓
+#         /metrics endpoint → Prometheus → Grafana → PostgreSQL
+
+services:
+  ollama-metrics:
+    image: ghcr.io/norskhelsenett/ollama-metrics:latest
+    container_name: ollama-metrics
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - PORT=8080
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - telemetry
+
+networks:
+  telemetry:
+    name: openclaw-telemetry
+    external: true

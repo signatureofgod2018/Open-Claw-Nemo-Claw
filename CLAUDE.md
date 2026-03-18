@@ -28,7 +28,10 @@ infra/
     fixtures/                  # Valid/invalid test fixtures for schema validation
     integration/               # Integration test scripts
   database/                    # PostgreSQL Telemetry Persistence
-    migrations/                # SQL migrations (001_create_telemetry_schema, 002_roles)
+    migrations/                # SQL migrations (001_schema, 002_roles, 003_canaries, 004_inference)
+  ollama/                      # Local Inference (Mistral Small 3.2 on AMD GPU)
+    config/                    # Ollama env, docker-compose for metrics proxy, Prometheus alerts
+    scripts/                   # Setup script (Ollama + ROCm + ollama-metrics)
     scripts/                   # Setup and migration runner scripts
   telemetry/                   # Runtime Harness (Health & Security Telemetry)
     config/                    # OTel Collector, Fluent Bit, Prometheus alerts, Grafana dashboards

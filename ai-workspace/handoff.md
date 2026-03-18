@@ -75,9 +75,26 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
 5. Deploy full telemetry stack (Fluent Bit → OTel → Prometheus/Loki/PostgreSQL → Grafana)
 6. Define curated skill allowlist (populate skill_allowlist table)
 
+### 8. Ollama Local Inference Infrastructure
+- **Model**: Mistral Small 3.2 (24B MoE) at Q4_K_M quantization (~14 GB VRAM)
+- **Runtime**: Ollama with AMD ROCm support (HSA_OVERRIDE_GFX_VERSION=10.3.0)
+- **Monitoring**: ollama-metrics proxy → Prometheus → Grafana → PostgreSQL
+- **Alerts**: 10 Prometheus rules — inference latency drift, throughput drops, memory growth, unknown agents, rate bursts, large prompts
+- **Database**: Migration 004 — inference_requests (partitioned), model_lifecycle, inference_baselines
+- **Views**: inference latency trend (p50/p95/p99), anomalies (z-score), token usage by agent, model load frequency
+- **GPU note**: AMD RX 6900 XT — no NVIDIA/CUDA, no Nemotron. Mistral via Ollama/ROCm instead.
+
+## System Profile (ST-Gabriel)
+- CPU: AMD Ryzen 7 5800X3D (8c/16t)
+- RAM: 32 GB
+- GPU: AMD Radeon RX 6900 XT (16 GB VRAM) — RDNA 2, ROCm
+- SSD: Samsung 980 PRO 1TB (NVMe) + 870 EVO 2TB (SATA)
+- OS: Windows 11 Pro + WSL2 Ubuntu 24.04 LTS
+- Docker Desktop installed (WSL2 backend)
+
 ## Blockers
-- Linux partition not yet set up on ST-Gabriel
-- GPU availability unknown (affects Nemotron local model viability)
+- WSL2 Ubuntu 24.04 provisioning (in progress)
+- AMD GPU — no Nemotron local models (NVIDIA only), using Mistral via Ollama instead
 
 ## Key Resources
 - OpenClaw docs: docs.openclaw.ai
