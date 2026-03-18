@@ -40,6 +40,18 @@
 - FR-31: [ ] Create first custom plugin (TypeScript)
 - FR-32: [ ] Register custom skills in local ClawHub or project directory
 
+### PostgreSQL Telemetry Persistence
+- FR-70: [ ] Install PostgreSQL on ST-Gabriel Linux partition
+- FR-71: [x] Create `telemetry` schema (security_events, audit_log, agent_baselines, skill_allowlist, alert_history, network_requests)
+- FR-72: [x] Monthly table partitioning for security_events and network_requests
+- FR-73: [x] Integrity-chained audit log (SHA-256 trigger)
+- FR-74: [x] Least-privilege roles: telemetry_writer (INSERT), telemetry_reader (SELECT), telemetry_admin (ALL)
+- FR-75: [x] Pre-built Grafana views (critical events, OWASP trends, agent risk scores, top hosts, hourly rates)
+- FR-76: [ ] Connect OTel Collector → PostgreSQL (telemetry_writer role)
+- FR-77: [ ] Connect Grafana → PostgreSQL (telemetry_reader role)
+- FR-78: [ ] Configure pg_cron for auto-partition creation and retention enforcement
+- FR-79: [ ] 12-month retention policy with automated partition cleanup
+
 ### Claude Code Integration
 - FR-40: [ ] Maintain `.claude/` directory with agents, skills, hooks for dev workflow
 - FR-41: [ ] Keep `ai-workspace/handoff.md` updated for session continuity
@@ -63,6 +75,7 @@
 - FR-01 through FR-04 (OpenClaw running on ST-Gabriel)
 - FR-10 through FR-13 (NemoClaw wrapping OpenClaw)
 - FR-50 through FR-59 (Security Sentinel — active from day one)
+- FR-70 through FR-77 (PostgreSQL telemetry persistence)
 - NFR-01, NFR-02
 
 ### P1 — Important
@@ -70,6 +83,7 @@
 - FR-14 (privacy router)
 - FR-30, FR-31 (custom skill + plugin)
 - FR-60 (security audit log)
+- FR-78, FR-79 (auto-partition, retention)
 - NFR-03, NFR-04
 
 ### P2 — Nice to have (Phase 2+)

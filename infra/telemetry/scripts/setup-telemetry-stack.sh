@@ -86,10 +86,29 @@ else
   echo "  NOTE: Set OTEL_COLLECTOR_HOST in /etc/fluent-bit/fluent-bit.conf to ST-Gabriel's IP"
 fi
 
+# 6. Install and configure PostgreSQL (orchestrator only)
+if [ "$ROLE" = "orchestrator" ]; then
+  echo "[6/6] Installing PostgreSQL for telemetry persistence..."
+  if ! command -v psql &> /dev/null; then
+    apt-get install -y postgresql postgresql-contrib
+    systemctl start postgresql
+    systemctl enable postgresql
+    echo "  Installed PostgreSQL"
+  else
+    echo "  PostgreSQL already installed: $(psql --version | head -1)"
+  fi
+
+  echo "  Run infra/database/scripts/setup-postgres.sh to create schema and roles"
+else
+  echo "[6/6] Skipping PostgreSQL (orchestrator-only component)"
+fi
+
 echo ""
 echo "=== Setup Complete ==="
 echo "Next steps:"
-echo "  1. Generate mTLS certificates for secure transport"
-echo "  2. Configure alert routing (infra/telemetry/policies/alert-routing.yml)"
-echo "  3. Import Grafana dashboards from infra/telemetry/config/grafana-dashboards/"
-echo "  4. Start services: fluent-bit, otelcol, prometheus, loki, grafana-server"
+echo "  1. Run infra/database/scripts/setup-postgres.sh (creates telemetry schema)"
+echo "  2. Generate mTLS certificates for secure transport"
+echo "  3. Configure alert routing (infra/telemetry/policies/alert-routing.yml)"
+echo "  4. Import Grafana dashboards from infra/telemetry/config/grafana-dashboards/"
+echo "  5. Add PostgreSQL as Grafana data source (use telemetry_reader role)"
+echo "  6. Start services: postgresql, fluent-bit, otelcol, prometheus, loki, grafana-server"

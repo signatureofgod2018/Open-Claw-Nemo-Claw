@@ -76,6 +76,37 @@
 - Runs locally for privacy and cost efficiency
 - Requires GPU — availability on ST-Gabriel TBD
 
+## Observability Stack
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  ST-Gabriel (Linux partition) — Telemetry Aggregation       │
+│                                                             │
+│  OpenClaw + NemoClaw ──► Fluent Bit ──► OTel Collector      │
+│                                            │                │
+│                              ┌─────────────┼────────────┐   │
+│                              ▼             ▼            ▼   │
+│                         Prometheus       Loki     PostgreSQL │
+│                          (metrics)      (logs)  (critical   │
+│                              │             │     telemetry)  │
+│                              └──────┬──────┘        │       │
+│                                     ▼               │       │
+│                                  Grafana ◄──────────┘       │
+│                               (dashboards)                  │
+└─────────────────────────────────────────────────────────────┘
+                              ▲
+        Maria (Fluent Bit) ───┘ (mTLS)
+```
+
+### PostgreSQL (`openclaw_telemetry` database)
+- **Schema**: `telemetry` — isolated from future application schemas
+- **Tables**: security_events, audit_log, agent_baselines, skill_allowlist, alert_history, network_requests
+- **Partitioned**: security_events and network_requests partitioned by month for efficient time-range queries
+- **Integrity**: audit_log entries chained with SHA-256 hashes (tamper detection)
+- **Views**: pre-built Grafana queries — critical events, OWASP trends, agent risk scores, top hosts
+- **Roles**: telemetry_writer (INSERT), telemetry_reader (SELECT), telemetry_admin (maintenance)
+- **Retention**: configurable (default 12 months), enforced by partition drop
+
 ## Technology Stack
 | Component | Technology |
 |-----------|-----------|
@@ -87,6 +118,13 @@
 | Plugin format | TypeScript modules (jiti loader) |
 | Config | `openclaw.json` + NemoClaw YAML policies |
 | Dev workflow | Claude Code (`.claude/` agents, skills, hooks) |
+| Database | PostgreSQL (telemetry persistence, trend analysis) |
+| Metrics | Prometheus (time-series, alerting) |
+| Logs | Loki (structured log aggregation) |
+| Log collection | Fluent Bit (per-machine, forwards to OTel) |
+| Telemetry pipeline | OpenTelemetry Collector (vendor-neutral) |
+| Dashboards | Grafana (Prometheus + Loki + PostgreSQL data sources) |
+| CI/CD | GitHub Actions (6-stage pipeline) |
 
 ## Transport (ST-Gabriel ↔ Maria) — TBD
 Options to evaluate:

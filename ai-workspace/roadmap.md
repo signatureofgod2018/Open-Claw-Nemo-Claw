@@ -26,10 +26,21 @@
   - [x] Telemetry event + audit log schemas (integrity-chained)
   - [x] Setup script for telemetry stack
 - [x] .gitignore and .pre-commit-config.yaml
+- [x] PostgreSQL telemetry persistence layer
+  - [x] Telemetry schema with 6 tables (security_events, audit_log, agent_baselines, skill_allowlist, alert_history, network_requests)
+  - [x] Monthly partitioning for security_events and network_requests
+  - [x] Integrity-chained audit log (SHA-256 trigger)
+  - [x] Least-privilege roles (writer, reader, admin)
+  - [x] Pre-built Grafana views (7 views for dashboarding)
+  - [x] Auto-partition creation and retention enforcement functions
+  - [x] Setup and migration scripts
+  - [x] OTel Collector updated to export to PostgreSQL
 - [ ] Set up Linux partition on ST-Gabriel
 - [ ] Determine GPU availability for local Nemotron models
 
-## Phase 1 — OpenClaw on ST-Gabriel
+## Phase 1 — OpenClaw + PostgreSQL on ST-Gabriel
+- [ ] Install PostgreSQL: `infra/database/scripts/setup-postgres.sh`
+- [ ] Run telemetry schema migrations
 - [ ] Install Node.js 24 on Linux partition
 - [ ] Install OpenClaw: `openclaw onboard`
 - [ ] Harden OpenClaw before enabling features (reference security assessment)

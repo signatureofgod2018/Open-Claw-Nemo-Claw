@@ -27,6 +27,9 @@ infra/
   test/
     fixtures/                  # Valid/invalid test fixtures for schema validation
     integration/               # Integration test scripts
+  database/                    # PostgreSQL Telemetry Persistence
+    migrations/                # SQL migrations (001_create_telemetry_schema, 002_roles)
+    scripts/                   # Setup and migration runner scripts
   telemetry/                   # Runtime Harness (Health & Security Telemetry)
     config/                    # OTel Collector, Fluent Bit, Prometheus alerts, Grafana dashboards
     schemas/                   # Telemetry event and audit log schemas

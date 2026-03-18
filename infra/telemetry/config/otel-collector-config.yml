@@ -1,5 +1,6 @@
 # OpenTelemetry Collector — aggregates telemetry from ST-Gabriel and Maria
-# Receives from local and remote Fluent Bit instances, exports to Prometheus + Loki
+# Receives from local and remote Fluent Bit instances
+# Exports to: Prometheus (metrics), Loki (logs), PostgreSQL (critical events)
 
 receivers:
   otlp:
@@ -55,6 +56,12 @@ exporters:
         event_type: ""
         risk_level: ""
 
+  # PostgreSQL — persist critical telemetry for long-term trend analysis
+  # Uses the telemetry_writer role (INSERT only, no UPDATE/DELETE)
+  otlpdb/postgres:
+    driver: postgres
+    datasource: "host=localhost port=5432 user=telemetry_writer password=${PGPASS_WRITER} dbname=openclaw_telemetry sslmode=require"
+
   # Debug exporter for development
   debug:
     verbosity: basic
@@ -69,4 +76,4 @@ service:
     logs:
       receivers: [otlp, fluentforward]
       processors: [batch, resource, filter]
-      exporters: [loki, debug]
+      exporters: [loki, otlpdb/postgres, debug]
