@@ -1,0 +1,9 @@
+{
+  "description": "Open-Claw-Nemo-Claw lifecycle hooks",
+  "hooks": {
+    "PreToolUse": [],
+    "PostToolUse": [],
+    "Stop": [],
+    "UserPromptSubmit": []
+  }
+}
