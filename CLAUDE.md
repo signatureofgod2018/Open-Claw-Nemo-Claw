@@ -32,6 +32,9 @@ infra/
   ollama/                      # Local Inference (Mistral Small 3.2 on AMD GPU)
     config/                    # Ollama env, docker-compose for metrics proxy, Prometheus alerts
     scripts/                   # Setup script (Ollama + ROCm + ollama-metrics)
+  exporters/                   # Whole House Prometheus Exporters
+    config/                    # Scrape targets, OS/Docker/Postgres/disk alert rules
+    scripts/                   # Exporter setup (node_exporter, cAdvisor, postgres, smartctl)
     scripts/                   # Setup and migration runner scripts
   telemetry/                   # Runtime Harness (Health & Security Telemetry)
     config/                    # OTel Collector, Fluent Bit, Prometheus alerts, Grafana dashboards

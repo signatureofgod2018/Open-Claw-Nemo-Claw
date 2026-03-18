@@ -1,0 +1,262 @@
+# Prometheus Alerting Rules — Whole House Monitoring
+# OS, Docker, PostgreSQL, Disk Health, Authentication
+
+groups:
+  # ================================================================
+  # OS LAYER (node_exporter)
+  # ================================================================
+  - name: os_health
+    interval: 30s
+    rules:
+      - alert: HostHighCPU
+        expr: 100 - (avg by(machine) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: medium
+          layer: os
+        annotations:
+          summary: "CPU usage >85% on {{ $labels.machine }}"
+
+      - alert: HostMemoryPressure
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.90
+        for: 5m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Memory >90% used on {{ $labels.machine }} — {{ $value | humanizePercentage }}"
+
+      - alert: HostSwapActive
+        expr: node_memory_SwapTotal_bytes > 0 and (node_memory_SwapTotal_bytes - node_memory_SwapFree_bytes) / node_memory_SwapTotal_bytes > 0.5
+        for: 5m
+        labels:
+          severity: medium
+          layer: os
+        annotations:
+          summary: "Swap >50% used on {{ $labels.machine }} — performance will degrade"
+
+      - alert: HostDiskSpaceLow
+        expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.10
+        for: 5m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} on {{ $labels.machine }} has <10% free"
+
+      - alert: HostDiskFull24h
+        expr: predict_linear(node_filesystem_avail_bytes[6h], 24*3600) < 0
+        for: 30m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} on {{ $labels.machine }} predicted full within 24h"
+
+      - alert: HostDiskIOLatency
+        expr: rate(node_disk_io_time_weighted_seconds_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: medium
+          layer: os
+          canary: performance
+        annotations:
+          summary: "High disk I/O wait on {{ $labels.machine }} — possible SSD degradation"
+
+      - alert: HostNetworkErrors
+        expr: rate(node_network_receive_errs_total[5m]) > 0 or rate(node_network_transmit_errs_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: medium
+          layer: os
+        annotations:
+          summary: "Network errors on {{ $labels.machine }} — {{ $labels.device }}"
+
+      - alert: HostFileDescriptorLimit
+        expr: node_filefd_allocated / node_filefd_maximum > 0.8
+        for: 5m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "File descriptors >80% allocated on {{ $labels.machine }}"
+
+  # ================================================================
+  # OS SECURITY (auth logs via node_exporter + Fluent Bit)
+  # ================================================================
+  - name: os_security
+    interval: 15s
+    rules:
+      - alert: SSHAuthFailure
+        expr: increase(node_logind_sessions_active{type="tty"}[5m]) > 5
+        for: 0s
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Multiple SSH/login sessions on {{ $labels.machine }}"
+          context: "Unexpected login sessions — verify all are authorized"
+
+      - alert: SystemdServiceCrashed
+        expr: node_systemd_unit_state{state="failed"} == 1
+        for: 1m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Service {{ $labels.name }} crashed on {{ $labels.machine }}"
+
+      - alert: SystemdServiceStopped
+        expr: node_systemd_unit_state{state="inactive", name=~"ollama|postgresql|grafana-server|prometheus|node_exporter|fluent-bit"} == 1
+        for: 5m
+        labels:
+          severity: high
+          layer: os
+        annotations:
+          summary: "Critical service {{ $labels.name }} is stopped on {{ $labels.machine }}"
+
+      - alert: UnexpectedReboot
+        expr: (time() - node_boot_time_seconds) < 600
+        for: 0s
+        labels:
+          severity: medium
+          layer: os
+        annotations:
+          summary: "{{ $labels.machine }} rebooted within the last 10 minutes"
+
+  # ================================================================
+  # DOCKER LAYER (cAdvisor)
+  # ================================================================
+  - name: docker_health
+    interval: 30s
+    rules:
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name!=""}[5m]) > 0.9
+        for: 5m
+        labels:
+          severity: medium
+          layer: container
+        annotations:
+          summary: "Container {{ $labels.name }} using >90% CPU on {{ $labels.machine }}"
+
+      - alert: ContainerHighMemory
+        expr: container_memory_usage_bytes{name!=""} / container_spec_memory_limit_bytes > 0.9
+        for: 5m
+        labels:
+          severity: high
+          layer: container
+        annotations:
+          summary: "Container {{ $labels.name }} at >90% memory limit on {{ $labels.machine }}"
+
+      - alert: ContainerRestarting
+        expr: increase(container_restart_count{name!=""}[1h]) > 3
+        for: 0s
+        labels:
+          severity: high
+          layer: container
+        annotations:
+          summary: "Container {{ $labels.name }} restarted {{ $value }} times in the last hour"
+
+      - alert: ContainerOOMKilled
+        expr: increase(container_oom_events_total{name!=""}[5m]) > 0
+        for: 0s
+        labels:
+          severity: critical
+          layer: container
+        annotations:
+          summary: "Container {{ $labels.name }} was OOM-killed on {{ $labels.machine }}"
+
+      - alert: NewContainerStarted
+        expr: increase(container_start_time_seconds{name!=""}[5m]) > 0
+        for: 0s
+        labels:
+          severity: info
+          layer: container
+          canary: process
+        annotations:
+          summary: "New container '{{ $labels.name }}' started on {{ $labels.machine }}"
+
+  # ================================================================
+  # POSTGRESQL LAYER (postgres_exporter)
+  # ================================================================
+  - name: postgres_health
+    interval: 30s
+    rules:
+      - alert: PostgresDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          layer: database
+        annotations:
+          summary: "PostgreSQL is down on {{ $labels.machine }}"
+
+      - alert: PostgresHighConnections
+        expr: pg_stat_database_numbackends / pg_settings_max_connections > 0.8
+        for: 5m
+        labels:
+          severity: high
+          layer: database
+        annotations:
+          summary: "PostgreSQL connections >80% of max on {{ $labels.machine }}"
+
+      - alert: PostgresSlowQueries
+        expr: pg_stat_activity_max_tx_duration{datname="openclaw_telemetry"} > 60
+        for: 1m
+        labels:
+          severity: medium
+          layer: database
+        annotations:
+          summary: "Long-running query (>60s) in openclaw_telemetry on {{ $labels.machine }}"
+
+      - alert: PostgresDeadlocks
+        expr: increase(pg_stat_database_deadlocks{datname="openclaw_telemetry"}[5m]) > 0
+        for: 0s
+        labels:
+          severity: high
+          layer: database
+        annotations:
+          summary: "Deadlock detected in openclaw_telemetry on {{ $labels.machine }}"
+
+      - alert: PostgresReplicationLag
+        expr: pg_replication_lag > 30
+        for: 5m
+        labels:
+          severity: high
+          layer: database
+        annotations:
+          summary: "PostgreSQL replication lag >30s on {{ $labels.machine }}"
+
+  # ================================================================
+  # DISK HEALTH (smartctl_exporter)
+  # ================================================================
+  - name: disk_health
+    interval: 60s
+    rules:
+      - alert: DiskSMARTWarning
+        expr: smartctl_device_smart_status == 0
+        for: 0s
+        labels:
+          severity: critical
+          layer: hardware
+        annotations:
+          summary: "SMART health check FAILED for {{ $labels.device }} on {{ $labels.machine }}"
+          context: "Disk may be failing. Back up immediately."
+
+      - alert: DiskTemperatureHigh
+        expr: smartctl_device_temperature > 60
+        for: 10m
+        labels:
+          severity: high
+          layer: hardware
+        annotations:
+          summary: "Disk {{ $labels.device }} on {{ $labels.machine }} temperature >60°C"
+
+      - alert: DiskWearLevelHigh
+        expr: smartctl_device_percentage_used > 80
+        for: 0s
+        labels:
+          severity: medium
+          layer: hardware
+        annotations:
+          summary: "SSD {{ $labels.device }} on {{ $labels.machine }} at {{ $value }}% wear level"

@@ -84,6 +84,15 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
 - **Views**: inference latency trend (p50/p95/p99), anomalies (z-score), token usage by agent, model load frequency
 - **GPU note**: AMD RX 6900 XT — no NVIDIA/CUDA, no Nemotron. Mistral via Ollama/ROCm instead.
 
+### 9. Whole House Monitoring (Prometheus Exporters)
+- **node_exporter** (:9100) — OS: CPU, RAM, disk, network, systemd services, file descriptors
+- **cAdvisor** (:8081) — Docker: per-container CPU, memory, network, disk I/O, OOM kills
+- **postgres_exporter** (:9187) — PostgreSQL: connections, query latency, deadlocks, replication
+- **smartctl_exporter** (:9633) — Disk: SMART health, temperature, SSD wear level
+- **Fluent Bit OS logs** — syslog, auth.log, kern.log, apt history, dpkg, systemd journals
+- **28 new alert rules** across OS health, OS security, Docker, PostgreSQL, disk hardware
+- All feeding into: Prometheus → Grafana → PostgreSQL (critical events)
+
 ## System Profile (ST-Gabriel)
 - CPU: AMD Ryzen 7 5800X3D (8c/16t)
 - RAM: 32 GB

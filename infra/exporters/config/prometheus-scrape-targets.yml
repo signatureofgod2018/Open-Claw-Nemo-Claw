@@ -1,0 +1,63 @@
+# Prometheus Scrape Configuration — All House Targets
+# Include in main prometheus.yml under scrape_configs:
+
+scrape_configs:
+  # === OS Layer ===
+  - job_name: "node"
+    static_configs:
+      - targets: ["localhost:9100"]
+        labels:
+          machine: "st-gabriel"
+          layer: "os"
+    # Add Maria when deployed:
+    # - targets: ["maria-ip:9100"]
+    #   labels:
+    #     machine: "maria"
+    #     layer: "os"
+
+  # === Docker/Container Layer ===
+  - job_name: "cadvisor"
+    static_configs:
+      - targets: ["localhost:8081"]
+        labels:
+          machine: "st-gabriel"
+          layer: "container"
+
+  # === Database Layer ===
+  - job_name: "postgres"
+    static_configs:
+      - targets: ["localhost:9187"]
+        labels:
+          machine: "st-gabriel"
+          layer: "database"
+
+  # === Disk Health ===
+  - job_name: "smartctl"
+    static_configs:
+      - targets: ["localhost:9633"]
+        labels:
+          machine: "st-gabriel"
+          layer: "hardware"
+
+  # === Local Inference ===
+  - job_name: "ollama"
+    static_configs:
+      - targets: ["localhost:8080"]
+        labels:
+          machine: "st-gabriel"
+          layer: "inference"
+
+  # === Application Layer (added when OpenClaw/NemoClaw are running) ===
+  # - job_name: "openclaw-gateway"
+  #   static_configs:
+  #     - targets: ["localhost:XXXX"]
+  #       labels:
+  #         machine: "st-gabriel"
+  #         layer: "application"
+
+  # - job_name: "nemoclaw"
+  #   static_configs:
+  #     - targets: ["localhost:XXXX"]
+  #       labels:
+  #         machine: "st-gabriel"
+  #         layer: "security"
