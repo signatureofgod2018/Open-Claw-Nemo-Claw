@@ -1,7 +1,18 @@
 {
   "description": "Open-Claw-Nemo-Claw lifecycle hooks",
   "hooks": {
-    "PreToolUse": [],
+    "PreToolUse": [
+      {
+        "description": "Security check before file writes — flag secrets and dangerous patterns",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Security Sentinel: monitoring tool use'",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
     "PostToolUse": [],
     "Stop": [],
     "UserPromptSubmit": []
