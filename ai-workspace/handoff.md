@@ -99,7 +99,7 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
 - GPU: AMD Radeon RX 6900 XT (16 GB VRAM) — RDNA 2, ROCm
 - SSD: Samsung 980 PRO 1TB (NVMe) + 870 EVO 2TB (SATA)
 - OS: Windows 11 Pro + WSL2 Ubuntu 24.04 LTS
-- Docker Desktop installed (WSL2 backend)
+- Docker: Engine 29.3.0 natively in Ubuntu (NOT Docker Desktop — see Known Issues)
 
 ### 10. Ubuntu 24.04 LTS on WSL2 — Installed & Hardened
 - **Distro**: Ubuntu 24.04.4 LTS (Noble Numbat) — default WSL2 distro
@@ -115,8 +115,29 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
   - Windows PATH stripped (appendWindowsPath=false)
   - Login banner: "AgenticOS — ST-GABRIEL — Guarded by St. Michael"
 
+### 11. Live Services Installed on Ubuntu 24.04
+- **PostgreSQL 16.13** (:5432) — `openclaw_telemetry` DB, 36 tables, 4 migrations applied
+- **Prometheus 3.3.0** (:9090) — scraping node_exporter + self, 30-day retention
+- **node_exporter 1.9.1** (:9100) — OS metrics with systemd + process collectors
+- **Grafana 12.4.1** (:3000) — accessible from Windows browser via localhost
+- **Docker Engine 29.3.0** — installed, disabled by default (`sudo systemctl start docker` when needed)
+- Data sources: Prometheus + PostgreSQL wired to Grafana (may need re-adding after DB reset)
+
+### 12. Docker Desktop vs Docker Engine (CRITICAL)
+- **Docker Desktop on Windows MUST be quit** before using WSL2 services
+- Docker Desktop's `docker-desktop` WSL distro disrupts the Hyper-V virtual switch
+- Even with WSL integration unchecked, it interferes with port forwarding
+- **Solution**: Docker Engine installed natively inside Ubuntu — use `systemctl start docker` instead
+- Docker Desktop can be uninstalled once confirmed unnecessary
+
+## Known Issues
+- **WSL2 networking**: After WSL shutdown/restart, services need manual restart: `sudo systemctl start postgresql prometheus node_exporter grafana-server`
+- **Docker Desktop conflict**: Kills WSL2 port forwarding. Must quit Docker Desktop before using WSL2 services from Windows browser.
+- **Grafana DB reset**: Data sources (Prometheus, PostgreSQL) need re-adding after any Grafana DB reset. Use Grafana UI → Connections → Data sources.
+
 ## Blockers
 - AMD GPU — no Nemotron local models (NVIDIA only), using Mistral via Ollama instead
+- Ollama not yet installed — next priority after stabilizing base stack
 
 ## Key Resources
 - OpenClaw docs: docs.openclaw.ai
