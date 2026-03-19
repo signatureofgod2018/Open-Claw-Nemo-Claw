@@ -131,9 +131,21 @@ Grafana ← Prometheus (metrics) ← OTel Collector ← Fluent Bit ← OpenClaw/
 - Docker Desktop can be uninstalled once confirmed unnecessary
 
 ## Known Issues
+- **WSL2 auto-shutdown**: WSL2 kills the distro when no terminal is open. **MUST keep a WSL terminal open** (minimized is fine) or services die. Fix next session: add keepalive process.
 - **WSL2 networking**: After WSL shutdown/restart, services need manual restart: `sudo systemctl start postgresql prometheus node_exporter grafana-server`
 - **Docker Desktop conflict**: Kills WSL2 port forwarding. Must quit Docker Desktop before using WSL2 services from Windows browser.
-- **Grafana DB reset**: Data sources (Prometheus, PostgreSQL) need re-adding after any Grafana DB reset. Use Grafana UI → Connections → Data sources.
+- **Grafana DB reset**: Data sources not yet wired — add Prometheus (`http://localhost:9090`) and PostgreSQL (`telemetry_reader` / `grafana_reader_2026`) via Grafana UI → Connections → Data sources.
+- **Grafana password**: Was reset from default. User set their own password.
+
+## Quick Start (after reboot or WSL drop)
+```bash
+# 1. Quit Docker Desktop if running
+# 2. Open PowerShell:
+wsl -d Ubuntu-24.04
+# 3. Inside Ubuntu (LEAVE THIS TERMINAL OPEN):
+sudo systemctl start postgresql prometheus node_exporter grafana-server
+# 4. Browser: http://localhost:3000 (Grafana) / http://localhost:9090 (Prometheus)
+```
 
 ## Blockers
 - AMD GPU — no Nemotron local models (NVIDIA only), using Mistral via Ollama instead
